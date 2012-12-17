@@ -96,6 +96,14 @@ int ADDCALL statsd_new(Statsd** stats, const char* serverAddress, int port, cons
 }
 
 void ADDCALL statsd_release(Statsd* statsd){
+   if (statsd->batch){
+      while(statsd->batch){
+         StatsdBatch* next = statsd->batch->next;
+         free(statsd->batch);
+         statsd->batch = next;
+      }
+   }
+
    free(statsd);
 }
 
