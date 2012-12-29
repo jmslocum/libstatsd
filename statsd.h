@@ -9,8 +9,6 @@
    #include <winsock2.h>
    #include <ws2tcpip.h>
 
-   #pragma comment (lib, "Ws2_32.lib")
-   
    //Undefine the macros, and redefine them to perform
    //windows specific tasks
    #undef ADDAPI
