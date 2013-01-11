@@ -21,6 +21,7 @@
 
 //Define the private functions
 static const char *networkToPresentation(int af, const void *src, char *dst, size_t size);
+static int sendToServer(Statsd* stats, const char* bucket, StatsType type, int delta, double sampleRate);
 
 #if defined(_WIN32)
 static const char *networkToPresentation(int af, const void *src, char *dst, size_t size){
@@ -31,6 +32,80 @@ static const char *networkToPresentation(int af, const void *src, char *dst, siz
    return inet_ntop(af, src, dst, size);
 }
 #endif
+
+/**
+   This is a helper function that will do the dirty work of sending
+   the stats to the statsd server. 
+
+   @param[in] stats - The stats client object
+   @param[in] bucket - The optional bucket name, if this is null then
+      the defualt bucket name is used from the stats object.
+   @param[in] type - The type of stat being sent
+   @param[in] delta - The value to send
+   @param[in] sampleRate - The sample rate of this stat. If the value is
+      less then or equal to 0, or greater then or equal to 1, it is ignored.
+
+   @return STATSD_SUCCESS on success, STATSD_BAD_STATS_TYPE if the type is 
+      not recognized. STATSD_UDP_SEND if the sendto() failed.
+*/
+static int sendToServer(Statsd* stats, const char* bucket, StatsType type, int delta, double sampleRate){
+   int dataLength = 0;
+   char data[256];
+   memset(&data, 0, 256);
+   char* statType = "";
+ 
+   //If the user has not specified a bucket, we will use the defualt
+   //bucket instead.
+   if (!bucket){
+      bucket = stats->bucket;
+   }
+  
+   //Build up the bucket name, with the prefix.
+   char bucketName [128];
+   if (stats->prefix){
+      sprintf(bucketName, "%s.%s", stats->prefix, bucket);
+   }
+   else {
+      sprintf(bucketName, "%s", bucket);
+   }
+
+   //Figure out what type of message to generate
+   switch(type){
+      case STATSD_COUNT:
+         statType = "c";
+         break;
+      case STATSD_GAUGE:
+         statType = "g";
+         break;
+      case STATSD_SET:
+         statType = "s";
+         break;
+      case STATSD_TIMING:
+         statType = "ms";
+      default:
+         return STATSD_BAD_STATS_TYPE;
+   }
+
+   //Do we have a sample rate?
+   if (sampleRate > 0.0 && sampleRate < 1.0){
+      sprintf(data, "%s:%d|%s|@%.2f", bucketName, delta, statType, sampleRate);
+   }
+   else {
+      sprintf(data, "%s:%d|%s", bucketName, delta, statType);
+   }
+
+   dataLength = strlen(data);
+
+   //Send the packet
+   int sent = sendto(stats->socketFd, data, dataLength, 0, (const struct sockaddr*)&stats->destination, sizeof(struct sockaddr_in));
+
+   if (sent == -1){
+      return STATSD_UDP_SEND;
+   }
+
+   return STATSD_SUCCESS;
+}
+
 
 //Implement the public functions
 
@@ -47,7 +122,7 @@ static const char *networkToPresentation(int af, const void *src, char *dst, siz
    @return STATSD_SUCCESS on success, or an error if something went wrong
    @see StatsError
 */
-int ADDCALL statsd_new(Statsd** stats, const char* serverAddress, int port, const char* bucket){
+int ADDCALL statsd_new(Statsd** stats, const char* serverAddress, int port, const char* prefix, const char* bucket){
    Statsd* newStats = (Statsd*)malloc(sizeof(Statsd));
    if (!newStats){
       return STATSD_MALLOC;
@@ -76,6 +151,7 @@ int ADDCALL statsd_new(Statsd** stats, const char* serverAddress, int port, cons
 
    newStats->serverAddress = serverAddress;
    newStats->port = port;
+   newStats->prefix = prefix;
    newStats->bucket = bucket;
 
    //Free the result now that we have copied the data out of it.
@@ -93,7 +169,7 @@ int ADDCALL statsd_new(Statsd** stats, const char* serverAddress, int port, cons
       newStats->lastReturn = STATSD_SOCKET;
       return STATSD_SOCKET;
    }
-
+   
    return STATSD_SUCCESS;
 }
 
@@ -123,12 +199,13 @@ void ADDCALL statsd_release(Statsd* statsd){
    @param[in,out] statsd - A previously allocated statsd object
    @param[in] server - The hostname or ip address of the server
    @param[in] port - The port number that the packets will be sent to
-   @param[in] bucket - The bucket name that will be used for the stats
+   @param[in] bucket - The default bucket name that will be used for 
+      the stats
 
    @return SCTE_SUCCESS on success, or an error otherwise
    @see StatsError
 */
-int ADDCALL statsd_init(Statsd* statsd, const char* server, int port, const char* bucket){
+int ADDCALL statsd_init(Statsd* statsd, const char* server, int port, const char* prefix, const char* bucket){
    memset(statsd, 0, sizeof(Statsd));
 
    //Do a DNS lookup (or IP address conversion) for the serverAddress
@@ -150,6 +227,7 @@ int ADDCALL statsd_init(Statsd* statsd, const char* server, int port, const char
 
    statsd->serverAddress = server;
    statsd->port = port;
+   statsd->prefix = prefix;
    statsd->bucket = bucket;
 
    //Free the result now that we have copied the data out of it.
@@ -167,49 +245,122 @@ int ADDCALL statsd_init(Statsd* statsd, const char* server, int port, const char
       statsd->lastReturn = STATSD_SOCKET;
       return STATSD_SOCKET;
    }
-
+   
    return STATSD_SUCCESS;
 }
 
 /**
+   Increment the bucket value by 1
 
+   @param[in] stats - The statsd client object
+   @param[in] bucket - The optional bucket name. If this is not
+      provided, the default bucket will be used from the statsd
+      object.
+
+   @return STATSD_SUCCESS on success, an error if there is a problem.
+   @see sendToServer
 */
-int ADDCALL statsd_increment(Statsd* statsd){
-   return STATSD_SUCCESS;
+int ADDCALL statsd_increment(Statsd* stats, const char* bucket){
+   return sendToServer(stats, bucket, STATSD_COUNT, 1, 1);   
 }
 
 /**
+   Decrement the bucket value by 1
 
+   @param[in] stats - The statsd client object
+   @param[in] bucket - The optional bucket name. If this is not
+      provided, the defualt bucket will be used from the statsd
+      object.
+   
+   @return STATSD_SUCCESS on success, an error if there is a problem.
+   @see sendToServer
 */
-int ADDCALL statsd_decrement(Statsd* statsd){
-   return STATSD_SUCCESS;
+int ADDCALL statsd_decrement(Statsd* stats, const char* bucket){
+   return sendToServer(stats, bucket, STATSD_COUNT, -1, 1);   
 }
 
 /**
+   Add a count value to the bucket
 
+   @param[in] stats - The statsd client object.
+   @param[in] bucket - The optional bucket name. If this is
+      not provided, the default bucket will be used from the
+      statsd object.
+   @param[in] count - The value to increment (or decrement) the bucket
+      by. If the value is negative, it will be decremented.
+   @param[in] sampleRate - The sample rate of this statistic. If you specify
+      a value 0 or less, or 1 or more then this value is ignored. Otherwise
+      this value is sent on to the server. NOTE: The actual sampling
+      rate must be done externally, as each statistic will be sent on
+      regardless of the sampleRate value.
+
+   @return STATSD_SUCCESS on success, an error if there is a problem.
+   @see sendToServer
 */
-int ADDCALL statsd_count(Statsd* statsd, int count, double sampleRate){
-   return STATSD_SUCCESS;
+int ADDCALL statsd_count(Statsd* stats, const char* bucket, int count, double sampleRate){
+   return sendToServer(stats, bucket, STATSD_COUNT, count, sampleRate);
 }
 
 /**
+   Sets the value of a bucket to an arbitrary value
 
+   @param[in] stats - The statsd client object.
+   @param[in] bucket - The optional bucket name. If this is
+      not provided, the default bucket will be used from the 
+      statsd object.
+   @param[in] value - The value to set the bucket to.
+   @param[in] sampleRate - The sample rate of this statistic. If you specify
+      a value 0 or less, or 1 or more then this value is ignored. Otherwise
+      this value is sent on to the server. NOTE: The actual sampling rate
+      must be done externally, as each statistic will be sent on
+      regardless of the sampleRate value.
+
+   @return STATSD_SUCCESS on success, an error if there is a problem.
+   @see sendToServer
 */
-int ADDCALL statsd_gauge(Statsd* statsd, int value, double sampleRate){
-   return STATSD_SUCCESS;
+int ADDCALL statsd_gauge(Statsd* stats, const char* bucket, int value, double sampleRate){
+   return sendToServer(stats, bucket, STATSD_GAUGE, value, sampleRate);
 }
 
 /**
+   Counts unique occurrences of events between flushes. 
 
+   @param[in] stats - The statsd client object.
+   @param[in] bucket - The optional bucket name. If this is
+      not provided, the default bucket will be used from the 
+      statsd object.
+   @param[in] value - The value to set the bucket to.
+   @param[in] sampleRate - The sample rate of this statistic. If you specify
+      a value 0 or less, or 1 or more then this value is ignored. Otherwise
+      this value is sent on to the server. NOTE: The actual sampling rate
+      must be done externally, as each statistic will be sent on
+      regardless of the sampleRate value.
+
+   @return STATSD_SUCCESS on success, an error if there is a problem.
+   @see sendToServer
 */
-int ADDCALL statsd_set(Statsd* statsd, int value, double sampleRate){
-   return STATSD_SUCCESS;
+int ADDCALL statsd_set(Statsd* stats, const char* bucket, int value, double sampleRate){
+   return sendToServer(stats, bucket, STATSD_SET, value, sampleRate);
 }
 
 /**
+   Records the time it took something to take in milliseconds. 
 
+   @param[in] stats - The statsd client object.
+   @param[in] bucket - The optional bucket name. If this is
+      not provided, the default bucket will be used from the 
+      statsd object.
+   @param[in] value - The value to set the bucket to.
+   @param[in] sampleRate - The sample rate of this statistic. If you specify
+      a value 0 or less, or 1 or more then this value is ignored. Otherwise
+      this value is sent on to the server. NOTE: The actual sampling rate
+      must be done externally, as each statistic will be sent on
+      regardless of the sampleRate value.
+
+   @return STATSD_SUCCESS on success, an error if there is a problem.
+   @see sendToServer
 */
-int ADDCALL statsd_timing(Statsd* statsd, int timing, double sampleRate){
-   return STATSD_SUCCESS;
+int ADDCALL statsd_timing(Statsd* stats, const char* bucket, int timing, double sampleRate){
+   return sendToServer(stats, bucket, STATSD_TIMING, timing, sampleRate);
 }
 

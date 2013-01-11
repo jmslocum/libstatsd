@@ -42,6 +42,7 @@ typedef struct _statsd_batch_t {
 typedef struct _statsd_t {
    const char* serverAddress;
    char ipAddress[128];
+   const char* prefix;
    const char* bucket;
    int port;
    int socketFd;
@@ -83,17 +84,17 @@ typedef enum {
 extern "C" {
 #endif
 
-ADDAPI int ADDCALL statsd_new(Statsd **stats, const char* serverAddress, int port, const char* bucket);
+ADDAPI int ADDCALL statsd_new(Statsd **stats, const char* serverAddress, int port, const char* prefix, const char* bucket);
 ADDAPI void ADDCALL statsd_release(Statsd* statsd);
-ADDAPI int ADDCALL statsd_init(Statsd* statsd, const char* server, int port, const char* bucket);
-ADDAPI int ADDCALL statsd_increment(Statsd* statsd);
-ADDAPI int ADDCALL statsd_decrement(Statsd* statsd);
-ADDAPI int ADDCALL statsd_count(Statsd* statsd, int count, double sampleRate);
-ADDAPI int ADDCALL statsd_gauge(Statsd* statsd, int value, double sampleRate);
-ADDAPI int ADDCALL statsd_set(Statsd* statsd, int value, double sampleRate);
-ADDAPI int ADDCALL statsd_timing(Statsd* statsd, int timing, double sampleRate);
+ADDAPI int ADDCALL statsd_init(Statsd* statsd, const char* server, int port, const char* prefix, const char* bucket);
+ADDAPI int ADDCALL statsd_increment(Statsd* statsd, const char* bucket);
+ADDAPI int ADDCALL statsd_decrement(Statsd* statsd, const char* bucket);
+ADDAPI int ADDCALL statsd_count(Statsd* statsd, const char* bucket, int count, double sampleRate);
+ADDAPI int ADDCALL statsd_gauge(Statsd* statsd, const char* bucket, int value, double sampleRate);
+ADDAPI int ADDCALL statsd_set(Statsd* statsd, const char* bucket, int value, double sampleRate);
+ADDAPI int ADDCALL statsd_timing(Statsd* statsd, const char* bucket, int timing, double sampleRate);
 ADDAPI int ADDCALL statsd_openBatch(Statsd* statsd);
-ADDAPI int ADDCALL statsd_addToBatch(Statsd* statsd, StatsType type, int value);
+ADDAPI int ADDCALL statsd_addToBatch(Statsd* statsd, StatsType type, const char* bucket, int value, double sampleRate);
 ADDAPI int ADDCALL statsd_sendBatch(Statsd* statsd);
 
 #ifdef __cplusplus
