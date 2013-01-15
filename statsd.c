@@ -82,6 +82,7 @@ static int sendToServer(Statsd* stats, const char* bucket, StatsType type, int d
          break;
       case STATSD_TIMING:
          statType = "ms";
+         break;
       default:
          return STATSD_BAD_STATS_TYPE;
    }

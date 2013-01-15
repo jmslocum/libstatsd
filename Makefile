@@ -11,13 +11,14 @@ else
 CFLAGS += -O3
 endif
 
-all : lib
+all : lib cli
 
 ifeq ($(OS), unix)
 CFLAGS += -fPIC
 
 lib : $(OBJECTS)
 	$(CC) -shared -W1,-soname,$(LIBRARY).so.1 -o $(LIBRARY).so.$(LIB_VERSION) $(OBJECTS)
+	-ln -s $(LIBRARY).so.$(LIB_VERSION) $(LIBRARY).so
 
 else
 CFLAGS += -D ADD_EXPORTS
@@ -34,6 +35,10 @@ clean :
 	-rm *.o
 	-rm *.gch
 	-rm $(LIBRARY).so*
+	-rm statsd-cli
+
+cli : 
+	$(CC) $(CFLAGS) statsd-cli.c -L./ -lstatsd -o statsd-cli
 
 install : 
 

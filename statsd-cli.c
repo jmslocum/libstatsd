@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include "statsd.h"
 
 #define STRING_MATCH 0
@@ -10,6 +11,15 @@ static int port = STATSD_PORT;
 static char* prefix = NULL;
 static char* bucket = NULL;
 static int type = STATSD_NONE;
+static int value = 0;
+
+static bool isDigit(const char* str){
+   if (str[0] >= '0' && str[0] <= '9'){
+      return true;
+   }
+   
+   return false;
+}
 
 static void usageAndExit(char* prog, FILE* where, int returnCode){
    fprintf(where, "%s usage:\n", prog);
@@ -18,29 +28,58 @@ static void usageAndExit(char* prog, FILE* where, int returnCode){
    fprintf(where, "  -r --prefix : specify the bucket prefix\n");
    fprintf(where, "  -b --bucket : specify the bucket\n");
    fprintf(where, "  -t --type : specify the stat type\n");
+   fprintf(where, "    types: count, set, gauge, timing\n");
    fprintf(where, "example:\n");
-   fprintf(where, "  %s -s statsd.example.com -r some.statsd -b counts 25\n");
+   fprintf(where, "  %s -s statsd.example.com -r some.statsd -b counts -t count 25\n", prog);
+
+   exit(returnCode);
 }
 
-static int parseCommandLine(int argc, char* argv[]){
-   for (int i = 0; i < argc; i++){
+static void parseCommandLine(int argc, char* argv[]){
+   for (int i = 1; i < argc; i++){
       if (strcmp(argv[i], "-s") == STRING_MATCH || strcmp(argv[i], "--server") == STRING_MATCH){
-
+         serverAddress = argv[i+1];
+         i++;
       }
       else if (strcmp(argv[i], "-p") == STRING_MATCH || strcmp(argv[i], "--port") == STRING_MATCH){
-
+         port = atoi(argv[i+1]);
+         i++;
       }
       else if (strcmp(argv[i], "-r") == STRING_MATCH || strcmp(argv[i], "--prefix") == STRING_MATCH){
-
+         prefix = argv[i+1];
+         i++;
       }
       else if (strcmp(argv[i], "-b") == STRING_MATCH || strcmp(argv[i], "--bucket") == STRING_MATCH){
-
+         bucket = argv[i+1];
+         i++;
       }
       else if (strcmp(argv[i], "-t") == STRING_MATCH || strcmp(argv[i], "--type") == STRING_MATCH){
-
+         char* typeStr = argv[i+1];
+         if (strcmp(typeStr, "count") == STRING_MATCH){
+            type = STATSD_COUNT;
+            i++;
+         }
+         else if (strcmp(typeStr, "gauge") == STRING_MATCH){
+            type = STATSD_GAUGE;
+            i++;
+         }
+         else if (strcmp(typeStr, "set") == STRING_MATCH){
+            type = STATSD_SET;
+            i++;
+         }
+         else if (strcmp(typeStr, "timing") == STRING_MATCH){
+            type = STATSD_TIMING;
+            i++;
+         }
+         else {
+            usageAndExit(argv[0], stderr, 1);
+         }
+      }
+      else if (isDigit(argv[i])){
+         value = atoi(argv[i]);
       }
       else {
-
+         usageAndExit(argv[0], stderr, 1);
       }
    }
 }
@@ -56,10 +95,57 @@ int main(int argc, char* argv[]){
 #endif
    
    //Parse the command line
+   parseCommandLine(argc, argv); 
 
-   //Set up the statsd object
+   if (prefix == NULL && bucket == NULL){
+      fprintf(stderr, "You must specify a bucket name!\n");
+      usageAndExit(argv[0], stderr, 1);
+   }
+
+   if (serverAddress == NULL){
+      fprintf(stderr, "You must specify a server address\n");
+      usageAndExit(argv[0], stderr, 1);
+   }
+
+   if (type == STATSD_NONE){
+      fprintf(stderr, "You must specify a stat type\n");
+      usageAndExit(argv[0], stderr, 1);
+   }
+
+   //Now we know we have all of the necesary parameters, open the 
+   //UDP socket and create the statsd client object.
    Statsd* stats = NULL;
    int ret = statsd_new(&stats, serverAddress, port, prefix, bucket);
+
+   if (ret != STATSD_SUCCESS){
+      fprintf(stderr, "Unable to create statsd object (%d)\n", ret);
+      return 1;
+   }
+
+   switch(type){
+      case STATSD_COUNT:
+         ret = statsd_count(stats, NULL, value, 0);
+         break;
+      case STATSD_SET:
+         ret = statsd_set(stats, NULL, value, 0);
+         break;
+      case STATSD_GAUGE:
+         ret = statsd_gauge(stats, NULL, value, 0);
+         break;
+      case STATSD_TIMING:
+         ret = statsd_timing(stats, NULL, value, 0);
+         break;
+      default:
+         //Don't know how I got here...
+         return 2;
+   }
+
+   if (ret != STATSD_SUCCESS){
+      fprintf(stderr, "Error sending stat to server (%d)\n", ret);
+      return 1;
+   }
+
+   statsd_release(stats);
 
    return EXIT_SUCCESS;
 }
