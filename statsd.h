@@ -37,7 +37,7 @@
 typedef struct _statsd_t {
    const char* serverAddress;
    char ipAddress[128];
-   const char* prefix;
+   const char* nameSpace;
    const char* bucket;
    int port;
    int socketFd;
@@ -79,9 +79,9 @@ typedef enum {
 extern "C" {
 #endif
 
-ADDAPI int ADDCALL statsd_new(Statsd **stats, const char* serverAddress, int port, const char* prefix, const char* bucket);
+ADDAPI int ADDCALL statsd_new(Statsd **stats, const char* serverAddress, int port, const char* nameSpace, const char* bucket);
 ADDAPI void ADDCALL statsd_release(Statsd* statsd);
-ADDAPI int ADDCALL statsd_init(Statsd* statsd, const char* server, int port, const char* prefix, const char* bucket);
+ADDAPI int ADDCALL statsd_init(Statsd* statsd, const char* server, int port, const char* nameSpace, const char* bucket);
 ADDAPI int ADDCALL statsd_increment(Statsd* statsd, const char* bucket);
 ADDAPI int ADDCALL statsd_decrement(Statsd* statsd, const char* bucket);
 ADDAPI int ADDCALL statsd_count(Statsd* statsd, const char* bucket, int count, double sampleRate);

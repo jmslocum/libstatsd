@@ -27,9 +27,10 @@ static bool isDigit(const char* str){
 
 static void usageAndExit(char* prog, FILE* where, int returnCode){
    fprintf(where, "%s usage:\n", prog);
+   fprintf(where, "  -h --help : print this help message\n");
    fprintf(where, "  -s --server : specify the server name or ip address\n");
    fprintf(where, "  -p --port : specify the port (default = 8125)\n");
-   fprintf(where, "  -r --prefix : specify the bucket prefix\n");
+   fprintf(where, "  -n --namespace : specify the bucket namespace\n");
    fprintf(where, "  -b --bucket : specify the bucket\n");
    fprintf(where, "  -t --type : specify the stat type\n");
    fprintf(where, "    types: count, set, gauge, timing\n");
@@ -78,6 +79,9 @@ static void parseCommandLine(int argc, char* argv[]){
          else {
             usageAndExit(argv[0], stderr, 1);
          }
+      }
+      else if (strcmp(argv[i], "-h") == STRING_MATCH || strcmp(argv[i], "--help") == STRING_MATCH) {
+         usageAndExit(argv[0], stdout, EXIT_SUCCESS);
       }
       else if (isDigit(argv[i])){
          value = atoi(argv[i]);

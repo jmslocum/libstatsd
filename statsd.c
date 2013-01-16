@@ -22,7 +22,7 @@
 //Define the private functions
 static const char *networkToPresentation(int af, const void *src, char *dst, size_t size);
 static int sendToServer(Statsd* stats, const char* bucket, StatsType type, int delta, double sampleRate);
-static int buildStatString(char* stat, const char* prefix, const char* bucket, StatsType type, int delta, double sampleRate);
+static int buildStatString(char* stat, const char* nameSpace, const char* bucket, StatsType type, int delta, double sampleRate);
 
 #if defined(_WIN32)
 static const char *networkToPresentation(int af, const void *src, char *dst, size_t size){
@@ -60,7 +60,7 @@ static int sendToServer(Statsd* stats, const char* bucket, StatsType type, int d
       bucket = stats->bucket;
    }
    
-   dataLength = buildStatString(data, stats->prefix, bucket, type, delta, sampleRate);
+   dataLength = buildStatString(data, stats->nameSpace, bucket, type, delta, sampleRate);
 
    if (dataLength < 0){
       return -dataLength;
@@ -81,7 +81,7 @@ static int sendToServer(Statsd* stats, const char* bucket, StatsType type, int d
    length. 
 
    @param[in,out] stat - This is where the final string will be placed
-   @param[in] prefix - The namespace of the stat
+   @param[in] nameSpace - The namespace of the stat
    @param[in] bucket - The bucket where to put the stat
    @param[in] type - The type of stat being packed
    @param[in] delta - The value of the stat
@@ -89,14 +89,14 @@ static int sendToServer(Statsd* stats, const char* bucket, StatsType type, int d
 
    @return The length of the stat string, or -1 on error
 */
-static int buildStatString(char* stat, const char* prefix, const char* bucket, StatsType type, int delta, double sampleRate){
+static int buildStatString(char* stat, const char* nameSpace, const char* bucket, StatsType type, int delta, double sampleRate){
    char* statType = NULL;
    char bucketName [128];
    int statLength = 0;
 
-   //Build up the bucket name, with the prefix.
-   if (prefix){
-      sprintf(bucketName, "%s.%s", prefix, bucket);
+   //Build up the bucket name, with the nameSpace.
+   if (nameSpace){
+      sprintf(bucketName, "%s.%s", nameSpace, bucket);
    }
    else {
       sprintf(bucketName, "%s", bucket);
@@ -148,7 +148,7 @@ static int buildStatString(char* stat, const char* prefix, const char* bucket, S
    @return STATSD_SUCCESS on success, or an error if something went wrong
    @see StatsError
 */
-int ADDCALL statsd_new(Statsd** stats, const char* serverAddress, int port, const char* prefix, const char* bucket){
+int ADDCALL statsd_new(Statsd** stats, const char* serverAddress, int port, const char* nameSpace, const char* bucket){
    Statsd* newStats = (Statsd*)malloc(sizeof(Statsd));
    if (!newStats){
       return STATSD_MALLOC;
@@ -177,7 +177,7 @@ int ADDCALL statsd_new(Statsd** stats, const char* serverAddress, int port, cons
 
    newStats->serverAddress = serverAddress;
    newStats->port = port;
-   newStats->prefix = prefix;
+   newStats->nameSpace = nameSpace;
    newStats->bucket = bucket;
 
    //Free the result now that we have copied the data out of it.
@@ -223,7 +223,7 @@ void ADDCALL statsd_release(Statsd* statsd){
    @return SCTE_SUCCESS on success, or an error otherwise
    @see StatsError
 */
-int ADDCALL statsd_init(Statsd* statsd, const char* server, int port, const char* prefix, const char* bucket){
+int ADDCALL statsd_init(Statsd* statsd, const char* server, int port, const char* nameSpace, const char* bucket){
    memset(statsd, 0, sizeof(Statsd));
 
    //Do a DNS lookup (or IP address conversion) for the serverAddress
@@ -245,7 +245,7 @@ int ADDCALL statsd_init(Statsd* statsd, const char* server, int port, const char
 
    statsd->serverAddress = server;
    statsd->port = port;
-   statsd->prefix = prefix;
+   statsd->nameSpace = nameSpace;
    statsd->bucket = bucket;
 
    //Free the result now that we have copied the data out of it.
@@ -416,7 +416,7 @@ int ADDCALL statsd_addToBatch(Statsd* statsd, StatsType type, const char* bucket
       bucket = statsd->bucket;
    }
 
-   int strLength = buildStatString(statsString, statsd->prefix, bucket, type, value, sampleRate);
+   int strLength = buildStatString(statsString, statsd->nameSpace, bucket, type, value, sampleRate);
    if (strLength < 0){
       return -strLength;
    }
