@@ -411,15 +411,44 @@ int ADDCALL statsd_resetBatch(Statsd* statsd){
    @return STATSD_SUCCESS if everything was successful. 
 */
 int ADDCALL statsd_addToBatch(Statsd* statsd, StatsType type, const char* bucket, int value, double sampleRate){
+   char statsString[256];
+   if (!bucket){
+      bucket = statsd->bucket;
+   }
+
+   int strLength = buildStatString(statsString, statsd->prefix, bucket, type, value, sampleRate);
+   if (strLength < 0){
+      return -strLength;
+   }
+
+   if (strLength + 1 + statsd->batchIndex < BATCH_MAX_SIZE){
+      strcat(statsd->batch, statsString);
+      strcat(statsd->batch, "\n");
+      statsd->batchIndex += strLength + 1;
+   }
+   else {
+      return STATSD_BATCH_FULL;
+   }
 
    return STATSD_SUCCESS;
 }
 
 /**
+   Send the batch message to the server. After a successful send
+   this will reset the batch buffer.
 
+   @param[in] statsd - The statsd client object
+   @return STATSD_SUCCESS on success, STATSD_UDP_SEND if the 
+      sendto() function failed.
 */
 int ADDCALL statsd_sendBatch(Statsd* statsd){
+   int sent = sendto(statsd->socketFd, statsd->batch, statsd->batchIndex, 0, (const struct sockaddr*)&statsd->destination, sizeof(struct sockaddr_in));
+
+   if (sent == -1){
+      return STATSD_UDP_SEND;
+   }
+   
+   statsd_resetBatch(statsd);
    return STATSD_SUCCESS;
 }
-
 
