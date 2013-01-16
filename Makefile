@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = --std=gnu99 -Wall
-OBJECTS = statsd.o batch.o
+OBJECTS = statsd.o
 LIBRARY = libstatsd
 LIB_VERSION = 0.0.1
 OS = unix

@@ -30,14 +30,9 @@
 #endif //end of windows/unix/linux OS stuff
 
 #define STATSD_PORT 8125
-
-typedef struct _statsd_batch_t {
-   int type;
-   int value;
-   double sampleRate;
-   struct _statsd_batch_t *next;
-   struct _statsd_batch_t *prev;
-} StatsdBatch;
+#ifndef BATCH_MAX_SIZE
+#define BATCH_MAX_SIZE 512
+#endif
 
 typedef struct _statsd_t {
    const char* serverAddress;
@@ -48,9 +43,9 @@ typedef struct _statsd_t {
    int socketFd;
    struct sockaddr_in destination;
 
-   StatsdBatch* batch;
-   StatsdBatch* batchLast;
-   
+   char batch[BATCH_MAX_SIZE];
+   int batchIndex;
+
    int messagesSent;
    int lastReturn;
    int lastErrno;
@@ -58,12 +53,11 @@ typedef struct _statsd_t {
 
 typedef enum {
    STATSD_NONE = 0,
-   STATSD_INCREMENT,
-   STATSD_DECREMENT,
    STATSD_COUNT,
    STATSD_GAUGE,
    STATSD_SET,
-   STATSD_TIMING
+   STATSD_TIMING,
+   STATSD_BATCH
 } StatsType;
 
 typedef enum {
@@ -77,6 +71,7 @@ typedef enum {
    STATSD_UDP_SEND,
    STATSD_BATCH_IN_PROGRESS,
    STATSD_NO_BATCH,
+   STATSD_BATCH_FULL,
    STATSD_BAD_STATS_TYPE
 } StatsError;
 
@@ -93,7 +88,7 @@ ADDAPI int ADDCALL statsd_count(Statsd* statsd, const char* bucket, int count, d
 ADDAPI int ADDCALL statsd_gauge(Statsd* statsd, const char* bucket, int value, double sampleRate);
 ADDAPI int ADDCALL statsd_set(Statsd* statsd, const char* bucket, int value, double sampleRate);
 ADDAPI int ADDCALL statsd_timing(Statsd* statsd, const char* bucket, int timing, double sampleRate);
-ADDAPI int ADDCALL statsd_openBatch(Statsd* statsd);
+ADDAPI int ADDCALL statsd_resetBatch(Statsd* statsd);
 ADDAPI int ADDCALL statsd_addToBatch(Statsd* statsd, StatsType type, const char* bucket, int value, double sampleRate);
 ADDAPI int ADDCALL statsd_sendBatch(Statsd* statsd);
 

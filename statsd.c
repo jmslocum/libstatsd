@@ -22,6 +22,7 @@
 //Define the private functions
 static const char *networkToPresentation(int af, const void *src, char *dst, size_t size);
 static int sendToServer(Statsd* stats, const char* bucket, StatsType type, int delta, double sampleRate);
+static int buildStatString(char* stat, const char* prefix, const char* bucket, StatsType type, int delta, double sampleRate);
 
 #if defined(_WIN32)
 static const char *networkToPresentation(int af, const void *src, char *dst, size_t size){
@@ -52,18 +53,50 @@ static int sendToServer(Statsd* stats, const char* bucket, StatsType type, int d
    int dataLength = 0;
    char data[256];
    memset(&data, 0, 256);
-   char* statType = "";
  
    //If the user has not specified a bucket, we will use the defualt
    //bucket instead.
    if (!bucket){
       bucket = stats->bucket;
    }
-  
-   //Build up the bucket name, with the prefix.
+   
+   dataLength = buildStatString(data, stats->prefix, bucket, type, delta, sampleRate);
+
+   if (dataLength < 0){
+      return -dataLength;
+   }
+
+   //Send the packet
+   int sent = sendto(stats->socketFd, data, dataLength, 0, (const struct sockaddr*)&stats->destination, sizeof(struct sockaddr_in));
+
+   if (sent == -1){
+      return STATSD_UDP_SEND;
+   }
+
+   return STATSD_SUCCESS;
+}
+
+/**
+   This is a helper function that will build up a stats string and return its
+   length. 
+
+   @param[in,out] stat - This is where the final string will be placed
+   @param[in] prefix - The namespace of the stat
+   @param[in] bucket - The bucket where to put the stat
+   @param[in] type - The type of stat being packed
+   @param[in] delta - The value of the stat
+   @param[in] sampleRate - The intervals at which this data was gathered
+
+   @return The length of the stat string, or -1 on error
+*/
+static int buildStatString(char* stat, const char* prefix, const char* bucket, StatsType type, int delta, double sampleRate){
+   char* statType = NULL;
    char bucketName [128];
-   if (stats->prefix){
-      sprintf(bucketName, "%s.%s", stats->prefix, bucket);
+   int statLength = 0;
+
+   //Build up the bucket name, with the prefix.
+   if (prefix){
+      sprintf(bucketName, "%s.%s", prefix, bucket);
    }
    else {
       sprintf(bucketName, "%s", bucket);
@@ -84,27 +117,19 @@ static int sendToServer(Statsd* stats, const char* bucket, StatsType type, int d
          statType = "ms";
          break;
       default:
-         return STATSD_BAD_STATS_TYPE;
+         return -STATSD_BAD_STATS_TYPE;
    }
 
    //Do we have a sample rate?
    if (sampleRate > 0.0 && sampleRate < 1.0){
-      sprintf(data, "%s:%d|%s|@%.2f", bucketName, delta, statType, sampleRate);
+      sprintf(stat, "%s:%d|%s|@%.2f", bucketName, delta, statType, sampleRate);
    }
    else {
-      sprintf(data, "%s:%d|%s", bucketName, delta, statType);
+      sprintf(stat, "%s:%d|%s", bucketName, delta, statType);
    }
 
-   dataLength = strlen(data);
-
-   //Send the packet
-   int sent = sendto(stats->socketFd, data, dataLength, 0, (const struct sockaddr*)&stats->destination, sizeof(struct sockaddr_in));
-
-   if (sent == -1){
-      return STATSD_UDP_SEND;
-   }
-
-   return STATSD_SUCCESS;
+   statLength = strlen(stat);
+   return statLength;
 }
 
 
@@ -181,14 +206,6 @@ int ADDCALL statsd_new(Statsd** stats, const char* serverAddress, int port, cons
       statsd_new(). 
 */
 void ADDCALL statsd_release(Statsd* statsd){
-   if (statsd->batch){
-      while(statsd->batch){
-         StatsdBatch* next = statsd->batch->next;
-         free(statsd->batch);
-         statsd->batch = next;
-      }
-   }
-
    free(statsd);
 }
 
@@ -364,4 +381,45 @@ int ADDCALL statsd_set(Statsd* stats, const char* bucket, int value, double samp
 int ADDCALL statsd_timing(Statsd* stats, const char* bucket, int timing, double sampleRate){
    return sendToServer(stats, bucket, STATSD_TIMING, timing, sampleRate);
 }
+
+/**
+   This function will reset the batch data that is being
+   held. This is called automatically whenever you send
+   the batch data to the server. You can also call this
+   manually to removed any stored batch data.
+
+   @param[in] statsd - The statsd client object
+   @return STATSD_SUCCESS
+*/
+int ADDCALL statsd_resetBatch(Statsd* statsd){
+   memset(statsd->batch, 0, BATCH_MAX_SIZE);
+   statsd->batchIndex = 0;
+   return STATSD_SUCCESS;
+}
+
+/**
+   Add stats to the batch buffer to be sent later. 
+
+   @param[in] statsd - The statsd client object
+   @param[in] type - The type of stat being added
+   @param[in] bucket - The name of a bucket to put the stat. This
+      is optional and if not provided the default bucket name from
+      the statsd object will be used.
+   @param[in] value - The value of the stat
+   @param[in] sampleRate - The rate at which the stat was gathered. 
+   
+   @return STATSD_SUCCESS if everything was successful. 
+*/
+int ADDCALL statsd_addToBatch(Statsd* statsd, StatsType type, const char* bucket, int value, double sampleRate){
+
+   return STATSD_SUCCESS;
+}
+
+/**
+
+*/
+int ADDCALL statsd_sendBatch(Statsd* statsd){
+   return STATSD_SUCCESS;
+}
+
 
