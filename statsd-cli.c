@@ -6,6 +6,10 @@
 
 #define STRING_MATCH 0
 
+#if defined (_WIN32)
+#pragma comment (lib, "Ws2_32.lib")
+#endif
+
 static char* serverAddress = NULL;
 static int port = STATSD_PORT;
 static char* prefix = NULL;
@@ -146,6 +150,10 @@ int main(int argc, char* argv[]){
    }
 
    statsd_release(stats);
+
+#if defined (_WIN32)
+   WSACleanup();  
+#endif
 
    return EXIT_SUCCESS;
 }
