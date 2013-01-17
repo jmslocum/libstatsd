@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = --std=gnu99 -Wall
 OBJECTS = statsd.o
 LIBRARY = libstatsd
-LIB_VERSION = 0.0.1
+LIB_VERSION = 0.0.2
 OS = unix
 
 ifdef DEBUG
@@ -11,28 +11,35 @@ else
 CFLAGS += -O3
 endif
 
-all : lib cli
-
+#Specific instructions for Linux and Unix systems
 ifeq ($(OS), unix)
 CFLAGS += -fPIC
+
+all : lib cli
 
 lib : $(OBJECTS)
 	$(CC) -shared -W1,-soname,$(LIBRARY).so.1 -o $(LIBRARY).so.$(LIB_VERSION) $(OBJECTS)
 	-ln -s $(LIBRARY).so.$(LIB_VERSION) $(LIBRARY).so
 
+cli : 
+	$(CC) $(CFLAGS) statsd-cli.c -L./ -lstatsd -o statsd-cli
+
+#Specific instructions for Windows systems
 else
 CFLAGS += -D ADD_EXPORTS
 
+all: lib cli
+
 lib: $(OBJECTS)
-	$(CC) -s -shared -mwindows -o $(LIBRARY).dll $(OBJECTS) -lWs2_32
+	$(CC) -shared -mwindows -o $(LIBRARY).dll $(OBJECTS) -Wl,--out-implib,$(LIBRARY).dll.a -LC:\Windows\System32 -lws2_32
+
+cli :
+	$(CC) --std=gnu99 -Wall statsd-cli.c -o statsd-cli.exe -L. -lstatsd -LC:\Windows\System32 -lws2_32
 
 endif
 
 %.o : %.c
 	$(CC) -c $(CFLAGS) $< -o $@
-
-cli : 
-	$(CC) $(CFLAGS) statsd-cli.c -L./ -lstatsd -o statsd-cli
 
 clean : 
 	-rm *.o
