@@ -4,7 +4,9 @@
 #include <errno.h>
 
 #if defined (_WIN32)
+   #include <windows.h>
    #include <winsock2.h>
+   #include <winsock.h>
    #include <ws2tcpip.h>
 #endif
 
@@ -24,15 +26,9 @@ static const char *networkToPresentation(int af, const void *src, char *dst, siz
 static int sendToServer(Statsd* stats, const char* bucket, StatsType type, int delta, double sampleRate);
 static int buildStatString(char* stat, const char* nameSpace, const char* bucket, StatsType type, int delta, double sampleRate);
 
-#if defined(_WIN32)
-static const char *networkToPresentation(int af, const void *src, char *dst, size_t size){
-   return InetNtop(af, src, dst, size);
-}
-#else
 static const char *networkToPresentation(int af, const void *src, char *dst, size_t size){
    return inet_ntop(af, src, dst, size);
 }
-#endif
 
 /**
    This is a helper function that will do the dirty work of sending
