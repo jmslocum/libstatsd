@@ -50,7 +50,7 @@ static void parseCommandLine(int argc, char* argv[]){
          port = atoi(argv[i+1]);
          i++;
       }
-      else if (strcmp(argv[i], "-r") == STRING_MATCH || strcmp(argv[i], "--prefix") == STRING_MATCH){
+      else if (strcmp(argv[i], "-n") == STRING_MATCH || strcmp(argv[i], "--namespace") == STRING_MATCH){
          prefix = argv[i+1];
          i++;
       }
