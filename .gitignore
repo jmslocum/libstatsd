@@ -1,3 +1,9 @@
 *.o
 *.swp
-
+*.cache
+*.in
+*.m4
+configure
+depcomp
+install-sh
+missing
