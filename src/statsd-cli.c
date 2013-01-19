@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <config.h>
 #include "statsd.h"
 
 #define STRING_MATCH 0
@@ -26,7 +27,8 @@ static bool isDigit(const char* str){
 }
 
 static void usageAndExit(char* prog, FILE* where, int returnCode){
-   fprintf(where, "%s usage:\n", prog);
+   fprintf(where, "%s version %s [%s]\n", prog, VERSION, PACKAGE_BUGREPORT);
+   fprintf(where, "  usage:\n");
    fprintf(where, "  -h --help : print this help message\n");
    fprintf(where, "  -s --server : specify the server name or ip address\n");
    fprintf(where, "  -p --port : specify the port (default = 8125)\n");
