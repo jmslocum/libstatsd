@@ -4,6 +4,7 @@
 AC_PREREQ([2.68])
 AC_INIT([statsd], [1.0.0], [j.m.slocum@gmail.com])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
+LT_INIT
 AC_CONFIG_HEADERS([config.h])
 
 # Checks for programs.
