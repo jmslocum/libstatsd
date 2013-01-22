@@ -3,6 +3,7 @@
 
 AC_PREREQ([2.68])
 AC_INIT([statsd], [1.0.1], [j.m.slocum@gmail.com])
+AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 LT_INIT
 AC_CONFIG_HEADERS([config.h])
