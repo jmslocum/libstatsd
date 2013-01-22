@@ -173,48 +173,9 @@ int ADDCALL statsd_new(Statsd** stats, const char* serverAddress, int port, cons
    }
 
    memset(newStats, 0, sizeof(Statsd));
-
+   newStats->socketFd = -1;
    *stats = newStats;
-   
-   //Do a DNS lookup (or IP address conversion) for the serverAddress
-   struct addrinfo hints, *result = NULL;
-   memset(&hints, 0, sizeof(hints));
-
-   //Set the hints to narrow downs the DNS entry we want
-   hints.ai_family = AF_INET;
-
-   int addrinfoStatus = getaddrinfo(serverAddress, NULL, &hints, &result);
-   if (addrinfoStatus != 0){
-      newStats->lastReturn = STATSD_BAD_SERVER_ADDRESS;
-      return STATSD_BAD_SERVER_ADDRESS;
-   }
-
-   //Copy the result into the UDP destination socket structure
-   memcpy(&newStats->destination, result->ai_addr, sizeof(struct sockaddr_in));
-   newStats->destination.sin_port = htons((short)port);
-
-   newStats->serverAddress = serverAddress;
-   newStats->port = port;
-   newStats->nameSpace = nameSpace;
-   newStats->bucket = bucket;
-
-   //Free the result now that we have copied the data out of it.
-   freeaddrinfo(result);
-
-   //Store the IP address in readable form
-   if (networkToPresentation(AF_INET, &newStats->destination.sin_addr, newStats->ipAddress, sizeof(newStats->ipAddress)) == NULL){
-      newStats->lastReturn = STATSD_NTOP;
-      return STATSD_NTOP;
-   }
-
-   //Open up the socket file descriptor
-   newStats->socketFd = socket(AF_INET, SOCK_DGRAM, 0);
-   if (newStats->socketFd == -1){
-      newStats->lastReturn = STATSD_SOCKET;
-      return STATSD_SOCKET;
-   }
-   
-   return STATSD_SUCCESS;
+   return statsd_init(*stats, serverAddress, port, nameSpace, bucket);
 }
 
 /**
@@ -242,8 +203,6 @@ void ADDCALL statsd_release(Statsd* statsd){
    @see StatsError
 */
 int ADDCALL statsd_init(Statsd* statsd, const char* server, int port, const char* nameSpace, const char* bucket){
-   memset(statsd, 0, sizeof(Statsd));
-
    //Do a DNS lookup (or IP address conversion) for the serverAddress
    struct addrinfo hints, *result = NULL;
    memset(&hints, 0, sizeof(hints));
@@ -273,6 +232,12 @@ int ADDCALL statsd_init(Statsd* statsd, const char* server, int port, const char
    if (networkToPresentation(AF_INET, &statsd->destination.sin_addr, statsd->ipAddress, sizeof(statsd->ipAddress)) == NULL){
       statsd->lastReturn = STATSD_NTOP;
       return STATSD_NTOP;
+   }
+  
+   // Check to see if there is already an open socket, and close it
+   if (statsd->socketFd > 0){
+      close(statsd->socketFd);
+      statsd->socketFd = -1;
    }
 
    //Open up the socket file descriptor

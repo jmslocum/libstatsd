@@ -59,7 +59,7 @@ static void usageAndExit(char* prog, FILE* where, int returnCode){
    fprintf(where, "  -t --type : specify the stat type\n");
    fprintf(where, "    types: count, set, gauge, timing\n");
    fprintf(where, "example:\n");
-   fprintf(where, "  %s -s statsd.example.com -r some.statsd -b counts -t count 25\n", prog);
+   fprintf(where, "  %s -s statsd.example.com -n some.statsd -b counts -t count 25\n", prog);
 
    exit(returnCode);
 }
