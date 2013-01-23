@@ -20,7 +20,7 @@ this you can run
 ./configure && make
 sudo make install
 ```
-This will install the library, headers, and a binary called statsd-cli.a
+This will install the library, headers, and a binary called statsd-cli.
 
 ### Downloading from jamesslocum.com
 You can download official release version from jamesslocum.com. Once you download
