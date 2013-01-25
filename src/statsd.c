@@ -422,6 +422,10 @@ int ADDCALL statsd_addToBatch(Statsd* statsd, StatsType type, const char* bucket
       sendto() function failed.
 */
 int ADDCALL statsd_sendBatch(Statsd* statsd){
+   if (statsd->batchIndex <= 0){
+      return STATSD_NO_BATCH;
+   }
+
    int sent = sendto(statsd->socketFd, statsd->batch, statsd->batchIndex, 0, (const struct sockaddr*)&statsd->destination, sizeof(struct sockaddr_in));
 
    if (sent == -1){
