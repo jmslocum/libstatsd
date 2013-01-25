@@ -212,7 +212,6 @@ int ADDCALL statsd_init(Statsd* statsd, const char* server, int port, const char
 
    int addrinfoStatus = getaddrinfo(server, NULL, &hints, &result);
    if (addrinfoStatus != 0){
-      statsd->lastReturn = STATSD_BAD_SERVER_ADDRESS;
       return STATSD_BAD_SERVER_ADDRESS;
    }
 
@@ -230,7 +229,6 @@ int ADDCALL statsd_init(Statsd* statsd, const char* server, int port, const char
 
    //Store the IP address in readable form
    if (networkToPresentation(AF_INET, &statsd->destination.sin_addr, statsd->ipAddress, sizeof(statsd->ipAddress)) == NULL){
-      statsd->lastReturn = STATSD_NTOP;
       return STATSD_NTOP;
    }
   
@@ -243,7 +241,6 @@ int ADDCALL statsd_init(Statsd* statsd, const char* server, int port, const char
    //Open up the socket file descriptor
    statsd->socketFd = socket(AF_INET, SOCK_DGRAM, 0);
    if (statsd->socketFd == -1){
-      statsd->lastReturn = STATSD_SOCKET;
       return STATSD_SOCKET;
    }
    

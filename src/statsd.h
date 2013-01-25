@@ -67,10 +67,6 @@ typedef struct _statsd_t {
 
    char batch[BATCH_MAX_SIZE];
    int batchIndex;
-
-   int messagesSent;
-   int lastReturn;
-   int lastErrno;
 } Statsd;
 
 typedef enum {
