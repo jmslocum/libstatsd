@@ -52,6 +52,7 @@ OR OTHER DEALINGS IN THE SOFTWARE.
 #endif //end of windows/unix/linux OS stuff
 
 #define STATSD_PORT 8125
+#define NO_SAMPLE_RATE 0
 #ifndef BATCH_MAX_SIZE
 #define BATCH_MAX_SIZE 512
 #endif
