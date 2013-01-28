@@ -79,14 +79,94 @@ if (ret != STATSD_SUCCESS){
 If you have used statsd_new() to dynamically create a client object, you must call
 statsd_release() to free the resources and avoid memory leaks. 
 
+```c
+int statsd_release(Statsd *stats);
+```
+
 ### Stat types and usage
+The stats types supported are count, set, timing, and gauge. They can be called through 
+their respective functions. Each of these functions takes in 4 parameters. 
+
+* statsd - This is the statsd client object
+* bucket - This is an optional bucket name that will override the value in the statsd client
+* value - This is the value of the stat to send
+* sampleRate - If you are gathering a stat incrementally, this is the rate.
+
+```c
+int statsd_count(Statsd* statsd, const char* bucket, int count, double sampleRate);
+int statsd_gauge(Statsd* statsd, const char* bucket, int value, double sampleRate);
+int statsd_set(Statsd* statsd, const char* bucket, int value, double sampleRate);
+int statsd_timing(Statsd* statsd, const char* bucket, int timing, double sampleRate);
+```
+There are also two convience functions for changing a count stat by 1. They take
+2 parameters.
+
+* statsd - This is the statsd client object
+* bucket - An optional bucket name to override the value in the statsd client.
+
+```c
+int statsd_increment(Statsd* statsd, const char* bucket);
+int statsd_decrement(Statsd* statsd, const char* bucket);
+```
 
 ### Batching
+Statsd also supports sending multiple stats at once in a single UDP packet. 
+
+* statsd - This is the statsd client object
+* type - The type of stat. STATSD_COUNT, STATSD_SET, STATSD_GAUGE, and STATSD_TIMING are valid types.
+* bucket - This is an optional bucket name that will override the value in the statsd client
+* value - This is the value of the stat to send
+* sampleRate - If you are gathering a stat incrementally, this is the rate.
+
+```c
+int statsd_addToBatch(Statsd* statsd, StatsType type, const char* bucket, int value, double sampleRate);
+int statsd_sendBatch(Statsd* statsd);
+int statsd_resetBatch(Statsd* statsd);
+```
 
 ### Errors
+The following values can be returned from the library functions
+
+* STATSD_SUCCESS - The function completed successfully.
+
+* STATSD_SOCKET - The socket could not be  created  during  the  initialization  of  the
+client object.
+
+* STATSD_NTOP  -  The  IP  address  of the server could not be converted into a readable
+form. see inet_ntop(3).
+
+* STATSD_MALLOC - Out of memory. Memory allocation failed.
+
+* STATSD_BAD_SERVER_ADDRESS - Unable to look up server name in DNS. see getaddrinfo(3).
+
+* STATSD_UDP_SEND - Unable to send data through the socket. see sendto(2).
+
+* STATSD_NO_BATCH - If you try to call statsd_sendBatch() before you have added any data
+to the batch.
+
+* STATSD_BATCH_FULL  -  If  you  try  to add more stats to the batch then the mtu of udp
+packet can handle. The default mtu limit is set to 512 bytes. you  can  override  this
+value at compile time by specifying a new value for BATCH_MAX_SIZE.
+
+* STATSD_BAD_STATS_TYPE - The type field specified was invalid.
 
 ## Command line
+This project comes with a command line tool called statsd-cli. 
 
+```bash
+$ statsd-cli -h
+statsd-cli version 1.0.0 [j.m.slocum@gmail.com]
+usage:
+   -h --help : print this help message
+   -s --server : specify the server name or ip address
+   -p --port : specify the port (default = 8125)
+   -n --namespace : specify the bucket namespace
+   -b --bucket : specify the bucket
+   -t --type : specify the stat type
+      types: count, set, gauge, timing
+   example:
+      statsd-cli -s statsd.example.com -n some.statsd -b counts -t count 25
+```
 ## License
 This project is available for use under the MIT license.
 
