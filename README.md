@@ -44,6 +44,7 @@ file and linking against libstatsd.
 ```c
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include <statsd.h>
 
 int main(int argc, char* argv[]){
