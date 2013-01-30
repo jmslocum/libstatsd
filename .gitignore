@@ -9,4 +9,4 @@ depcomp
 install-sh
 missing
 ltmain.sh
-
+*.tar.gz
