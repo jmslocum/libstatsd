@@ -65,6 +65,8 @@ typedef struct _statsd_t {
    int port;
    int socketFd;
    struct sockaddr_in destination;
+   
+   int (*random)(void);
 
    char batch[BATCH_MAX_SIZE];
    int batchIndex;

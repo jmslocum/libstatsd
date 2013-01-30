@@ -66,10 +66,16 @@ static const char *networkToPresentation(int af, const void *src, char *dst, siz
       not recognized. STATSD_UDP_SEND if the sendto() failed.
 */
 static int sendToServer(Statsd* stats, const char* bucket, StatsType type, int delta, double sampleRate){
+   //See if we randomly fall under the sample rate
+   if (sampleRate > 0 && sampleRate < 1 && (double)((double)stats->random() / RAND_MAX) >= sampleRate){
+      return STATSD_SUCCESS;
+   }
+ 
    int dataLength = 0;
    char data[256];
    memset(&data, 0, 256);
- 
+
+  
    //If the user has not specified a bucket, we will use the defualt
    //bucket instead.
    if (!bucket){
@@ -221,6 +227,7 @@ int ADDCALL statsd_init(Statsd* statsd, const char* server, int port, const char
    statsd->port = port;
    statsd->nameSpace = nameSpace;
    statsd->bucket = bucket;
+   statsd->random = rand;
 
    //Free the result now that we have copied the data out of it.
    freeaddrinfo(result);
@@ -286,9 +293,7 @@ int ADDCALL statsd_decrement(Statsd* stats, const char* bucket){
       by. If the value is negative, it will be decremented.
    @param[in] sampleRate - The sample rate of this statistic. If you specify
       a value 0 or less, or 1 or more then this value is ignored. Otherwise
-      this value is sent on to the server. NOTE: The actual sampling
-      rate must be done externally, as each statistic will be sent on
-      regardless of the sampleRate value.
+      this value is sent on to the server.
 
    @return STATSD_SUCCESS on success, an error if there is a problem.
    @see sendToServer
@@ -307,9 +312,7 @@ int ADDCALL statsd_count(Statsd* stats, const char* bucket, int count, double sa
    @param[in] value - The value to set the bucket to.
    @param[in] sampleRate - The sample rate of this statistic. If you specify
       a value 0 or less, or 1 or more then this value is ignored. Otherwise
-      this value is sent on to the server. NOTE: The actual sampling rate
-      must be done externally, as each statistic will be sent on
-      regardless of the sampleRate value.
+      this value is sent on to the server. 
 
    @return STATSD_SUCCESS on success, an error if there is a problem.
    @see sendToServer
@@ -328,9 +331,7 @@ int ADDCALL statsd_gauge(Statsd* stats, const char* bucket, int value, double sa
    @param[in] value - The value to set the bucket to.
    @param[in] sampleRate - The sample rate of this statistic. If you specify
       a value 0 or less, or 1 or more then this value is ignored. Otherwise
-      this value is sent on to the server. NOTE: The actual sampling rate
-      must be done externally, as each statistic will be sent on
-      regardless of the sampleRate value.
+      this value is sent on to the server. 
 
    @return STATSD_SUCCESS on success, an error if there is a problem.
    @see sendToServer
@@ -389,6 +390,11 @@ int ADDCALL statsd_resetBatch(Statsd* statsd){
    @return STATSD_SUCCESS if everything was successful. 
 */
 int ADDCALL statsd_addToBatch(Statsd* statsd, StatsType type, const char* bucket, int value, double sampleRate){
+   //See if we randomly fall under the sample rate
+   if (sampleRate > 0 && sampleRate < 1 && (double)((double)statsd->random() / RAND_MAX) >= sampleRate){
+      return STATSD_SUCCESS;
+   }
+ 
    char statsString[256];
    if (!bucket){
       bucket = statsd->bucket;

@@ -43,10 +43,15 @@ Once the library has been installed, you can use it by including the statsd.h he
 file and linking against libstatsd.
 ```c
 #include <stdio.h>
+#include <stdlib.h>
 #include <statsd.h>
 
 int main(int argc, char* argv[]){
+   //Recommended before you use the default sampling features
+   srand(time(NULL));
+
    //program that uses statsd...
+
    return 0;
 }
 ```
@@ -106,6 +111,19 @@ There are also two convience functions for changing a count stat by 1. They take
 int statsd_increment(Statsd* statsd, const char* bucket);
 int statsd_decrement(Statsd* statsd, const char* bucket);
 ```
+### Sampling
+By default, the sampling RNG is the C rand() function. This is not a very good
+RNG so it can be overridden with a better one if you wish. The Statsd client
+object has a function pointer called random.
+
+```c
+int (*random)(void);
+```
+
+You can assign this to another RNG function the generates an integer number
+between [0 - RAND_MAX]. It is recommended that before you use the default
+sampling RNG, you call srand(time(NULL)) to initialize the RNG and get
+better random numbers. 
 
 ### Batching
 Statsd also supports sending multiple stats at once in a single UDP packet. 

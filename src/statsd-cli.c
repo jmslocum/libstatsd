@@ -24,6 +24,7 @@ OR OTHER DEALINGS IN THE SOFTWARE.
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <time.h>
 #include <config.h>
 #include "statsd.h"
 
@@ -39,6 +40,7 @@ static char* prefix = NULL;
 static char* bucket = NULL;
 static int type = STATSD_NONE;
 static int value = 0;
+static double samplerate = 0.0;
 
 static bool isDigit(const char* str){
    if (str[0] >= '0' && str[0] <= '9'){
@@ -58,6 +60,7 @@ static void usageAndExit(char* prog, FILE* where, int returnCode){
    fprintf(where, "  -b --bucket : specify the bucket\n");
    fprintf(where, "  -t --type : specify the stat type\n");
    fprintf(where, "    types: count, set, gauge, timing\n");
+   fprintf(where, "  -r --rate : specify the sample rate\n");
    fprintf(where, "example:\n");
    fprintf(where, "  %s -s statsd.example.com -n some.statsd -b counts -t count 25\n", prog);
 
@@ -107,6 +110,10 @@ static void parseCommandLine(int argc, char* argv[]){
       else if (strcmp(argv[i], "-h") == STRING_MATCH || strcmp(argv[i], "--help") == STRING_MATCH) {
          usageAndExit(argv[0], stdout, EXIT_SUCCESS);
       }
+      else if (strcmp(argv[i], "-r") == STRING_MATCH || strcmp(argv[i], "--rate") == STRING_MATCH) {
+         samplerate = strtod(argv[i+1], NULL);
+         i++;
+      }
       else if (isDigit(argv[i])){
          value = atoi(argv[i]);
       }
@@ -128,6 +135,8 @@ int main(int argc, char* argv[]){
    
    //Parse the command line
    parseCommandLine(argc, argv); 
+   
+   srand(time(NULL));
 
    if (prefix == NULL && bucket == NULL){
       fprintf(stderr, "You must specify a bucket name!\n");
@@ -156,16 +165,16 @@ int main(int argc, char* argv[]){
 
    switch(type){
       case STATSD_COUNT:
-         ret = statsd_count(stats, NULL, value, 0);
+         ret = statsd_count(stats, NULL, value, samplerate);
          break;
       case STATSD_SET:
-         ret = statsd_set(stats, NULL, value, 0);
+         ret = statsd_set(stats, NULL, value, samplerate);
          break;
       case STATSD_GAUGE:
-         ret = statsd_gauge(stats, NULL, value, 0);
+         ret = statsd_gauge(stats, NULL, value, samplerate);
          break;
       case STATSD_TIMING:
-         ret = statsd_timing(stats, NULL, value, 0);
+         ret = statsd_timing(stats, NULL, value, samplerate);
          break;
       default:
          //Don't know how I got here...
