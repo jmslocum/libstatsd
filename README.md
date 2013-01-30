@@ -180,6 +180,7 @@ usage:
    -b --bucket : specify the bucket
    -t --type : specify the stat type
       types: count, set, gauge, timing
+   -r --rate : specify the sample rate
    example:
       statsd-cli -s statsd.example.com -n some.statsd -b counts -t count 25
 ```
