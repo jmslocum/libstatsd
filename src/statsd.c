@@ -30,9 +30,7 @@ OR OTHER DEALINGS IN THE SOFTWARE.
    #include <winsock2.h>
    #include <winsock.h>
    #include <ws2tcpip.h>
-#endif
-
-#if defined (__unix__) || defined (__linux__)
+#else
    #include <unistd.h>
    #include <sys/types.h>
    #include <sys/socket.h>
