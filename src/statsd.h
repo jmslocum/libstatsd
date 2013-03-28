@@ -48,6 +48,7 @@ OR OTHER DEALINGS IN THE SOFTWARE.
    //Unix specific includes
    #include <sys/socket.h>
    #include <arpa/inet.h>
+   #include <netinet/in.h>
 
 #endif //end of windows/unix/linux OS stuff
 
