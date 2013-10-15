@@ -102,6 +102,7 @@ extern "C" {
 #endif
 
 ADDAPI int ADDCALL statsd_new(Statsd **stats, const char* serverAddress, int port, const char* nameSpace, const char* bucket);
+ADDAPI void ADDCALL statsd_free(Statsd* statsd);
 ADDAPI void ADDCALL statsd_release(Statsd* statsd);
 ADDAPI int ADDCALL statsd_init(Statsd* statsd, const char* server, int port, const char* nameSpace, const char* bucket);
 ADDAPI int ADDCALL statsd_increment(Statsd* statsd, const char* bucket);

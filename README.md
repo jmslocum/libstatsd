@@ -70,7 +70,26 @@ int statsd_new(Statsd **stats, const char* serverAddress, int port, const char* 
 int statsd_init(Statsd* statsd, const char* server, int port, const char* nameSpace, const char* bucket);
 ```
 The first way will use malloc to allocate new memory for the Statsd client object. The 
-second way can be used for static allocation. 
+second way can be used for static allocation.
+
+#### Static allocation
+
+```c
+Statsd stats;
+int ret = statsd_init(&stats, "localhost", STATSD_PORT, "application.test", "times");
+if (ret != STATSD_SUCCESS){
+   //Error
+   return ret;
+}
+```
+If you have used statsd_init() to initialize a client object, you must call
+statsd_release() to free the resources. 
+
+```c
+int statsd_release(Statsd *stats);
+``` 
+
+#### Dynamic allocation
 
 ```c
 Statsd *stats = NULL;
@@ -81,10 +100,10 @@ if (ret != STATSD_SUCCESS){
 }
 ```
 If you have used statsd_new() to dynamically create a client object, you must call
-statsd_release() to free the resources and avoid memory leaks. 
+statsd_free() to free the resources and avoid memory leaks. 
 
 ```c
-int statsd_release(Statsd *stats);
+int statsd_free(Statsd *stats);
 ```
 
 ### Stat types and usage
