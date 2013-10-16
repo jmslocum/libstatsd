@@ -186,7 +186,7 @@ int main(int argc, char* argv[]){
       return 1;
    }
 
-   statsd_release(stats);
+   statsd_free(stats);
 
 #if defined (_WIN32)
    WSACleanup();  
