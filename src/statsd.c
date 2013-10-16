@@ -188,12 +188,33 @@ int ADDCALL statsd_new(Statsd** stats, const char* serverAddress, int port, cons
    @param[in] statsd - The statsd object created by a call to
       statsd_new(). 
 */
-void ADDCALL statsd_release(Statsd* statsd){
+void ADDCALL statsd_free(Statsd* statsd){
+   if(!statsd)
+      return;
+
+   statsd_release(statsd);
    free(statsd);
 }
 
 /**
-   This will initialize (or reinitialize) a statsd object that 
+   Free the resources in a statsd object initialized through a
+      call to statsd_init()
+
+   @param[in] statsd - The statsd object initialized by a call
+      to statsd_init().
+*/
+void ADDCALL statsd_release(Statsd* statsd){
+   if(!statsd)
+      return;
+
+   if (statsd->socketFd > 0){
+      close(statsd->socketFd);
+      statsd->socketFd = -1;
+   }
+}
+
+/**
+   This will initialize (or reinitialize) a statsd object that
    has already been created by a call to statsd_new() or has been
    allocated statically on the stack. 
 
